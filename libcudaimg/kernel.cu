@@ -26,7 +26,7 @@ __global__ void invertImage(unsigned char* image, uint32_t width, uint32_t heigh
 
 // Exposed function that will be called from the host
 extern "C" __declspec(dllexport)
-void processImage(unsigned char* image, uint32_t width, uint32_t height, uint32_t len) {
+void invertImage(unsigned char* image, uint32_t width, uint32_t height, uint32_t len) {
     unsigned char* d_image;
     size_t imageSize = len * sizeof(unsigned char);
 
