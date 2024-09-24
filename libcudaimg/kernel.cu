@@ -26,11 +26,9 @@ __global__ void invertImage(unsigned char* image, uint32_t width, uint32_t heigh
 
 // Exposed function that will be called from the host
 extern "C" __declspec(dllexport)
-void invertImage(unsigned char* image, uint32_t width, uint32_t height, uint32_t len) {
+void invertImage(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height) {
     unsigned char* d_image;
-    size_t imageSize = len * sizeof(unsigned char);
-
-	printf("Processing image of size %d x %d in cuda\n", width, height);
+    size_t imageSize = image_len * sizeof(unsigned char);
 
     // Allocate memory on the GPU
     CUDA_CHECK(cudaMalloc((void**)&d_image, imageSize));
