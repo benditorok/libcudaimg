@@ -2,18 +2,22 @@
 #include "device_launch_parameters.h"
 #include <stdio.h>
 
-// Error checking macro
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            fprintf(stderr, "CUDA Error: %s (error code: %d)\n",            \
-                    cudaGetErrorString(err), err);                          \
-            exit(EXIT_FAILURE);                                             \
-        }                                                                   \
-    } while (0)
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
+{
+    if (code != cudaSuccess)
+    {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
 
-// Kernel that inverts a grayscale image
+        if (abort)
+        {
+            cudaDeviceReset();
+            exit(code);
+        }
+    }
+}
+
+// Invert an image
 __global__ void invertImage(unsigned char* image, uint32_t width, uint32_t height) {
     uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
     uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -24,17 +28,17 @@ __global__ void invertImage(unsigned char* image, uint32_t width, uint32_t heigh
     }
 }
 
-// Exposed function that will be called from the host
+// Exposed which calls the invertImage kernel
 extern "C" __declspec(dllexport)
 void invertImage(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height) {
     unsigned char* d_image;
     size_t imageSize = image_len * sizeof(unsigned char);
 
     // Allocate memory on the GPU
-    CUDA_CHECK(cudaMalloc((void**)&d_image, imageSize));
+    gpuErrchk(cudaMalloc((void**)&d_image, imageSize));
 
     // Copy the image to device memory
-    CUDA_CHECK(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
 
     // Define block and grid sizes
     dim3 blockSize(16, 16);
@@ -42,11 +46,11 @@ void invertImage(unsigned char* image, uint32_t image_len, uint32_t width, uint3
 
     // Launch the kernel
     invertImage<<<gridSize, blockSize>>>(d_image, width, height);
-    CUDA_CHECK(cudaGetLastError()); // Check for kernel launch errors
+    gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 
     // Copy the processed image back to the host
-    CUDA_CHECK(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
 
     // Free the device memory
-    CUDA_CHECK(cudaFree(d_image));
+    gpuErrchk(cudaFree(d_image));
 }
