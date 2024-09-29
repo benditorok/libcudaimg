@@ -78,7 +78,15 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="lib\exports.cu" />
     <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="lib\kernels.cu" />
+    <CudaCompile Include="lib\utils.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lib\exports.cuh" />
+    <ClInclude Include="lib\kernels.cuh" />
+    <ClInclude Include="lib\utils.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
