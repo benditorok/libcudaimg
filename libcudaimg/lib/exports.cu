@@ -27,7 +27,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::invertImage << <gridSize, blockSize >> > (d_image, width, height);
+		kernels::invertImage<<<gridSize, blockSize>>>(d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 
 		// Copy the processed image back to the host
@@ -52,7 +52,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::gammaTransformImage << <gridSize, blockSize> >> (d_image, width, height, gamma);
+		kernels::gammaTransformImage<<<gridSize, blockSize>>>(d_image, width, height, gamma);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 
 		// Copy the processed image back to the host
