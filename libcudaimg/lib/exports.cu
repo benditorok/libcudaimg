@@ -27,7 +27,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::invertImage <<<gridSize,blockSize>>> (d_image, width, height);
+		kernels::invertImage << <gridSize, blockSize >> > (d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 
 		// Copy the processed image back to the host
@@ -37,7 +37,7 @@ namespace exports
 		gpuErrchk(cudaFree(d_image));
 	}
 
-	void gammaTransformImage(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height) {
+	void gammaTransformImage(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, float gamma) {
 		unsigned char* d_image;
 		size_t imageSize = image_len * sizeof(unsigned char);
 
@@ -52,7 +52,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::gammaTransformImage << <gridSize, blockSize >> > (d_image, width, height);
+		kernels::gammaTransformImage << <gridSize, blockSize> >> (d_image, width, height, gamma);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 
 		// Copy the processed image back to the host
