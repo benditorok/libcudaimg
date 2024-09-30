@@ -11,6 +11,9 @@ namespace kernels
 	// Invert all the pixels in the image
 	__global__ void invertImage(unsigned char* image, uint32_t width, uint32_t height);
 	
-
+	// Apply gamma transformation to the image
 	__global__ void gammaTransformImage(unsigned char* image, uint32_t width, uint32_t height, float gamma);
+
+	// Apply logarithmic transformation to the image
+	__global__ void logarithmicTransformImage(unsigned char* image, uint32_t width, uint32_t height, float base);
 }
