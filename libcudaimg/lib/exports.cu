@@ -29,6 +29,7 @@ namespace exports
 		// Launch the kernel
 		kernels::invertImage<<<gridSize, blockSize>>>(d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
 
 		// Copy the processed image back to the host
 		gpuErrchk(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
@@ -54,6 +55,7 @@ namespace exports
 		// Launch the kernel
 		kernels::gammaTransformImage<<<gridSize, blockSize>>>(d_image, width, height, gamma);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
 
 		// Copy the processed image back to the host
 		gpuErrchk(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
@@ -80,6 +82,7 @@ namespace exports
 		// Launch the kernel
 		kernels::logarithmicTransformImage << <gridSize, blockSize >> > (d_image, width, height, base);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
 
 		// Copy the processed image back to the host
 		gpuErrchk(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
@@ -100,12 +103,14 @@ namespace exports
 		gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
 
 		// Define block and grid sizes
-		dim3 blockSize(16, 16);
-		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
+		const uint32_t THREADS_PER_BLOCK = 256;
+		uint32_t num_pixels = width * height;
+		uint32_t blocks = (num_pixels + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
 		// Launch the kernel
-        kernels::grayscaleImage<<<gridSize, blockSize>>>(d_image, width, height);
+        kernels::grayscaleImage<<<blocks, THREADS_PER_BLOCK >>>(d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
 
 		// Copy the processed image back to the host
 		gpuErrchk(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
