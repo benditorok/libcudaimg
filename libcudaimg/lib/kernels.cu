@@ -39,7 +39,7 @@ namespace kernels
 
 		if (x < width && y < height) {
 			uint32_t index = y * width + x;
-			image[index] = logf(1 + image[index]) / log(1 + base) * 255; // Apply logarithmic transformation
+			image[index] = logf(1 + image[index]) / logf(1 + base) * 255; // Apply logarithmic transformation
 		}
 	}
 }
