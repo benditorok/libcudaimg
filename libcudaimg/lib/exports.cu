@@ -78,7 +78,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::logarithmicTransformImage << <gridSize, blockSize >> > (d_image, width, height, gamma);
+		kernels::logarithmicTransformImage << <gridSize, blockSize >> > (d_image, width, height, base);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 
 		// Copy the processed image back to the host

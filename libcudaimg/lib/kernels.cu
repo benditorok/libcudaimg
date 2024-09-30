@@ -3,7 +3,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdio.h>
-#include <math.h>
+#include <cmath>
 
 #include "utils.cuh"
 
@@ -39,7 +39,7 @@ namespace kernels
 
 		if (x < width && y < height) {
 			uint32_t index = y * width + x;
-			image[index] = log(1 + image[index]) / log(1 + base) * 255; // Apply logarithmic transformation
+			image[index] = logf(1 + image[index]) / log(1 + base) * 255; // Apply logarithmic transformation
 		}
 	}
 }
