@@ -10,22 +10,26 @@
 namespace kernels
 {
 	// Invert all the pixels in the image
-	__global__ void invertImage(unsigned char* image, uint32_t width, uint32_t height) {
+	__global__ void invertImage(unsigned char* image, uint32_t width, uint32_t height)
+	{
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
 		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
-		if (x < width && y < height) {
+		if (x < width && y < height)
+		{
 			uint32_t index = y * width + x;
 			image[index] = 255 - image[index]; // Invert pixel value
 		}
 	}
 
 	// Apply gamma transformation to the image
-	__global__ void gammaTransformImage(unsigned char* image, uint32_t width, uint32_t height, float gamma) {
+	__global__ void gammaTransformImage(unsigned char* image, uint32_t width, uint32_t height, float gamma)
+	{
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
 		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
-		if (x < width && y < height) {
+		if (x < width && y < height)
+		{
 			uint32_t index = y * width + x;
 			image[index] = pow(image[index] / 255.0f, gamma) * 255; // Apply gamma transformation
 		}
@@ -37,9 +41,32 @@ namespace kernels
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
 		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
-		if (x < width && y < height) {
+		if (x < width && y < height)
+		{
 			uint32_t index = y * width + x;
 			image[index] = logf(1 + image[index]) / logf(1 + base) * 255; // Apply logarithmic transformation
+		}
+	}
+
+	// Convert the image to grayscale
+	__global__ void grayscaleImage(unsigned char* image, uint32_t width, uint32_t height)
+	{
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+		uint32_t index = y * width + x;
+		
+		if (index % 3 == 0 && x < width && y < height)
+		{
+			unsigned char& r = image[index];
+			unsigned char& g = image[index + 1];
+			unsigned char& b = image[index + 2];
+
+			unsigned char gray = static_cast<unsigned char>(0.299f * r + 0.587f * g + 0.114f * b); // Convert to grayscale
+
+			image[index] = gray;
+			image[index + 1] = gray;
+			image[index + 2] = gray;
 		}
 	}
 }

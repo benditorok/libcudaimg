@@ -16,4 +16,7 @@ namespace kernels
 
 	// Apply logarithmic transformation to the image
 	__global__ void logarithmicTransformImage(unsigned char* image, uint32_t width, uint32_t height, float base);
+
+	// Turn the image into grayscale
+	__global__ void grayscaleImage(unsigned char* image, uint32_t width, uint32_t height);
 }
