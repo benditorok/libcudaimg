@@ -118,4 +118,36 @@ namespace exports
 		// Free the device memory
 		gpuErrchk(cudaFree(d_image));
 	}
+
+	void computeHistogram(unsigned char* image, uint32_t image_len, uint32_t* histogram, uint32_t width, uint32_t height)
+	{
+		unsigned char* d_image;
+		uint32_t* d_histogram;
+		size_t imageSize = image_len * sizeof(unsigned char);
+		size_t histogramSize = 256 * sizeof(uint32_t);
+
+		// Allocate memory on the GPU
+		gpuErrchk(cudaMalloc((void**)&d_image, imageSize));
+		gpuErrchk(cudaMalloc((void**)&d_histogram, histogramSize));
+
+		// Copy the image to device memory
+		gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
+
+		// Define block and grid sizes
+		const uint32_t THREADS_PER_BLOCK = 256;
+		uint32_t num_pixels = width * height;
+		uint32_t blocks = (num_pixels + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+
+		// Launch the kernel
+		kernels::computeHistogram<<<blocks, THREADS_PER_BLOCK>>>(d_image, d_histogram, width, height);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
+
+		// Copy the histogram back to the host
+		gpuErrchk(cudaMemcpy(histogram, d_histogram, histogramSize, cudaMemcpyDeviceToHost));
+
+		// Free the device memory
+		gpuErrchk(cudaFree(d_image));
+		gpuErrchk(cudaFree(d_histogram));
+	}
 }

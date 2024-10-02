@@ -19,4 +19,7 @@ namespace kernels
 
 	// Turn the image into grayscale
 	__global__ void grayscaleImage(unsigned char* image, uint32_t width, uint32_t height);
+
+	// Compute the histogram of the image
+	__global__ void computeHistogram(unsigned char* image, uint32_t* histogram, uint32_t width, uint32_t height);
 }

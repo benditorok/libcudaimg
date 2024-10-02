@@ -69,4 +69,17 @@ namespace kernels
 			image[rgb_index + 2] = gray;
 		}
 	}
+
+	__global__ void computeHistogram(unsigned char* image, uint32_t* histogram, uint32_t width, uint32_t height)
+	{
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+		if (x < width && y < height) {
+			uint32_t index = y * width + x;
+			unsigned char& pixelValue = image[index];
+			
+			histogram[pixelValue] += 1;
+		}
+	}
 }
