@@ -79,6 +79,7 @@ namespace kernels
 			uint32_t index = y * width + x;
 			unsigned char& pixelValue = image[index];
 			
+			// TODO fix race condition
 			histogram[pixelValue] += 1;
 		}
 	}
