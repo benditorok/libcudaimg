@@ -9,7 +9,6 @@
 
 namespace kernels
 {
-	// Invert all the pixels in the image
 	__global__ void invertImage(unsigned char* image, uint32_t width, uint32_t height)
 	{
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -22,7 +21,6 @@ namespace kernels
 		}
 	}
 
-	// Apply gamma transformation to the image
 	__global__ void gammaTransformImage(unsigned char* image, uint32_t width, uint32_t height, float gamma)
 	{
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -35,7 +33,6 @@ namespace kernels
 		}
 	}
 
-	// Apply logarithmic transformation to the image
 	__global__ void logarithmicTransformImage(unsigned char* image, uint32_t width, uint32_t height, float base)
 	{
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -48,7 +45,6 @@ namespace kernels
 		}
 	}
 
-	// Convert the image to grayscale
 	__global__ void grayscaleImage(unsigned char* image, uint32_t width, uint32_t height)
 	{
 		uint32_t pixel_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -70,7 +66,6 @@ namespace kernels
 		}
 	}
 
-	// Compute the histogram of the image
 	__global__ void computeHistogram(unsigned char* image, uint32_t* histogram, uint32_t width, uint32_t height)
 	{
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
