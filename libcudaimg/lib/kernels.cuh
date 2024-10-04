@@ -10,7 +10,7 @@ namespace kernels
 {
 	// Invert all the pixels in the image
 	__global__ void invertImage(unsigned char* image, uint32_t width, uint32_t height);
-	
+
 	// Apply gamma transformation to the image
 	__global__ void gammaTransformImage(unsigned char* image, uint32_t width, uint32_t height, float gamma);
 
@@ -19,4 +19,16 @@ namespace kernels
 
 	// Turn the image into grayscale
 	__global__ void grayscaleImage(unsigned char* image, uint32_t width, uint32_t height);
+
+	// Compute the histogram of the image
+	__global__ void computeHistogram(unsigned char* image, uint32_t* histogram, uint32_t width, uint32_t height);
+
+	namespace histogram_balancing
+	{
+		// Compute the cumulative distribution function of the histogram
+		__global__ void computeCDF(const uint32_t* hist, float* cdf, uint32_t num_pixels);
+
+		// Apply histogram equalization to the image
+		__global__ void applyEqualization(const unsigned char* input_img, unsigned char* output_img, const float* cdf, uint32_t width, uint32_t height);
+	}
 }
