@@ -83,6 +83,45 @@ namespace kernels
 		}
 	}
 
+	__global__ void balanceHistogram(unsigned char* image, uint32_t width, uint32_t height)
+	{
+		__shared__ uint32_t histogram[256];
+		__shared__ uint32_t cdf[256];
+
+		// Initialize shared memory
+		if (threadIdx.x < 256) {
+			histogram[threadIdx.x] = 0;
+			cdf[threadIdx.x] = 0;
+		}
+		__syncthreads();
+
+		// Calculate histogram
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+		if (x < width && y < height) {
+			uint32_t index = y * width + x;
+			unsigned char pixelValue = image[index];
+			atomicAdd(&histogram[pixelValue], 1);
+		}
+		__syncthreads();
+
+		// Calculate CDF using parallel prefix sum
+		for (int stride = 1; stride < 256; stride *= 2) {
+			if (threadIdx.x >= stride) {
+				cdf[threadIdx.x] += histogram[threadIdx.x - stride];
+			}
+			__syncthreads();
+		}
+
+		// Normalize the image using the CDF
+		if (x < width && y < height) {
+			uint32_t index = y * width + x;
+			unsigned char pixelValue = image[index];
+			unsigned char normalizedValue = static_cast<unsigned char>((cdf[pixelValue] - cdf[0]) * 255 / (width * height - cdf[0]));
+			image[index] = normalizedValue;
+		}
+	}
+
 	namespace histogram_utils
 	{
 		__global__ void computeCDF(uint32_t* histogram, uint32_t* cdf, uint32_t numPixels)
@@ -110,7 +149,21 @@ namespace kernels
 			}
 		}
 
-		__global__ void normalizeImage(unsigned char* image, uint32_t* cdf, uint32_t width, uint32_t height, uint32_t numPixels)
+		__global__ void normalizeImage(unsigned char* image, uint32_t* cdf, uint32_t width, uint32_t height, uint32_t numPixels, unsigned char intensity)
+		{
+			int x = blockIdx.x * blockDim.x + threadIdx.x;
+			int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+			if (x < width && y < height)
+			{
+				int idx = y * width + x;
+				unsigned char pixel = image[idx];
+				// Normalize the pixel value based on the CDF and the provided intensity
+				image[idx] = min(255, max(0, (int)((cdf[pixel] - cdf[0]) * 255 / (numPixels - cdf[0]) * intensity / 255)));
+			}
+		}
+
+		/*__global__ void normalizeImage(unsigned char* image, uint32_t* cdf, uint32_t width, uint32_t height, uint32_t numPixels)
 		{
 			uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
 			uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -122,6 +175,6 @@ namespace kernels
 				unsigned char normalizedValue = static_cast<unsigned char>((cdf[pixelValue] - cdf[0]) * 255 / (numPixels - cdf[0]));
 				image[index] = normalizedValue;
 			}
-		}
+		}*/
 	}
 }
