@@ -124,35 +124,27 @@ namespace kernels
 		}
 	}
 
-	__global__ void boxFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filter_size)
-	{
-		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
-		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+	__global__ void boxFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filter_size) {
+		int x = blockIdx.x * blockDim.x + threadIdx.x;
+		int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-		if (x < width && y < height)
-		{
-			uint32_t index = y * width + x;
+		if (x < width && y < height) {
+			int half_filter = filter_size / 2;
+			int sum = 0;
+			int count = 0;
 
-			uint32_t sum = 0;
-			uint32_t count = 0;
-
-			for (size_t i = -filter_size; i <= filter_size; ++i)
-			{
-				for (uint32_t j = -filter_size; j <= filter_size; ++j)
-				{
-					uint32_t nx = x + i;
-					uint32_t ny = y + j;
-
-					if (nx >= 0 && nx < width && ny >= 0 && ny < height)
-					{
-						uint32_t nIndex = ny * width + nx;
-						sum += image[nIndex];
-						count++;
-					}
+			// Loop over the filter window
+			for (int dy = -half_filter; dy <= half_filter; ++dy) {
+				for (int dx = -half_filter; dx <= half_filter; ++dx) {
+					int nx = min(max(x + dx, 0), (int)width - 1);  // Clamp to image boundaries
+					int ny = min(max(y + dy, 0), (int)height - 1); // Clamp to image boundaries
+					sum += image[ny * width + nx];                 // Sum pixel values
+					count++;
 				}
 			}
 
-			output[index] = sum / count;
+			// Compute the average and write to output image
+			output[y * width + x] = sum / count;
 		}
 	}
 }
