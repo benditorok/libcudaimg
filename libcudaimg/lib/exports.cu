@@ -151,7 +151,7 @@ namespace exports
 		gpuErrchk(cudaFree(d_histogram));
 	}
 
-	void balanceHistogramImage(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height)
+	void balanceHistogram(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height)
 	{
 		unsigned char* d_image;
 		size_t imageSize = image_len * sizeof(unsigned char);
