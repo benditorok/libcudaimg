@@ -154,21 +154,37 @@ namespace exports
 	void balanceHistogram(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height)
 	{
 		unsigned char* d_image;
+		uint32_t* d_histogram;
+		uint32_t* d_cdf;
 		size_t imageSize = image_len * sizeof(unsigned char);
+		size_t histogramSize = 256 * sizeof(uint32_t);
 
 		// Allocate memory on the GPU
 		gpuErrchk(cudaMalloc((void**)&d_image, imageSize));
+		gpuErrchk(cudaMalloc((void**)&d_histogram, histogramSize));
+		gpuErrchk(cudaMalloc((void**)&d_cdf, histogramSize));
 
 		// Copy the image to device memory
 		gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
+		gpuErrchk(cudaMemset(d_histogram, 0, histogramSize));
 
 		// Define block and grid sizes
 		dim3 blockSize(16, 16);
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
-		// Launch the kernel
-		kernels::balanceHistogram << <gridSize, blockSize >> > (d_image, width, height);
-		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		// Launch the kernel to compute the histogram
+		kernels::computeHistogram << <gridSize, blockSize >> > (d_image, d_histogram, width, height);
+		gpuErrchk(cudaGetLastError());
+		gpuErrchk(cudaDeviceSynchronize());
+
+		// Launch the kernel to compute the CDF
+		kernels::histogram_utils::computeCDF << <1, 256 >> > (d_histogram, d_cdf, width * height);
+		gpuErrchk(cudaGetLastError());
+		gpuErrchk(cudaDeviceSynchronize());
+
+		// Launch the kernel to normalize the image
+		kernels::histogram_utils::normalizeImage << <gridSize, blockSize >> > (d_image, d_cdf, width, height, width * height);
+		gpuErrchk(cudaGetLastError());
 		gpuErrchk(cudaDeviceSynchronize());
 
 		// Copy the processed image back to the host
@@ -176,6 +192,7 @@ namespace exports
 
 		// Free the device memory
 		gpuErrchk(cudaFree(d_image));
+		gpuErrchk(cudaFree(d_histogram));
+		gpuErrchk(cudaFree(d_cdf));
 	}
-
 }

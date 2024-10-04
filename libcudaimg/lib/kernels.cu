@@ -83,42 +83,45 @@ namespace kernels
 		}
 	}
 
-	__global__ void balanceHistogram(unsigned char* image, uint32_t width, uint32_t height)
+	namespace histogram_utils
 	{
-		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
-		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
-
-		if (x < width && y < height)
+		__global__ void computeCDF(uint32_t* histogram, uint32_t* cdf, uint32_t numPixels)
 		{
-			uint32_t index = y * width + x;
-			unsigned char pixelValue = image[index];
+			__shared__ uint32_t temp[256];
+			int tid = threadIdx.x;
 
-			// Calculate the cumulative distribution function (CDF)
-			__shared__ uint32_t cdf[256];
-			if (threadIdx.x == 0 && threadIdx.y == 0)
-			{
-				for (int i = 0; i < 256; ++i)
-				{
-					cdf[i] = 0;
+			if (tid < 256) {
+				temp[tid] = histogram[tid];
+			}
+			__syncthreads();
+
+			for (int stride = 1; stride <= tid; stride *= 2) {
+				uint32_t val = 0;
+				if (tid >= stride) {
+					val = temp[tid - stride];
 				}
-			}
-			__syncthreads();
-
-			atomicAdd(&cdf[pixelValue], 1);
-
-			__syncthreads();
-
-			// Calculate the CDF for the current pixel value
-			uint32_t cdfValue = 0;
-			for (int i = 0; i <= pixelValue; ++i)
-			{
-				cdfValue += cdf[i];
+				__syncthreads();
+				temp[tid] += val;
+				__syncthreads();
 			}
 
-			// Normalize the pixel value using the maximum possible value
-			unsigned char normalizedValue = static_cast<unsigned char>(cdfValue * 255 / (width * height));
+			if (tid < 256) {
+				cdf[tid] = temp[tid];
+			}
+		}
 
-			image[index] = normalizedValue;
+		__global__ void normalizeImage(unsigned char* image, uint32_t* cdf, uint32_t width, uint32_t height, uint32_t numPixels)
+		{
+			uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+			uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+			if (x < width && y < height) {
+				uint32_t index = y * width + x;
+				unsigned char pixelValue = image[index];
+
+				unsigned char normalizedValue = static_cast<unsigned char>((cdf[pixelValue] - cdf[0]) * 255 / (numPixels - cdf[0]));
+				image[index] = normalizedValue;
+			}
 		}
 	}
 }
