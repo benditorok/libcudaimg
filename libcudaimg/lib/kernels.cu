@@ -70,6 +70,7 @@ namespace kernels
 		}
 	}
 
+	// Compute the histogram of the image
 	__global__ void computeHistogram(unsigned char* image, uint32_t* histogram, uint32_t width, uint32_t height)
 	{
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -83,98 +84,48 @@ namespace kernels
 		}
 	}
 
-	__global__ void balanceHistogram(unsigned char* image, uint32_t width, uint32_t height)
+	namespace histogram_balancing
 	{
-		__shared__ uint32_t histogram[256];
-		__shared__ uint32_t cdf[256];
-
-		// Initialize shared memory
-		if (threadIdx.x < 256) {
-			histogram[threadIdx.x] = 0;
-			cdf[threadIdx.x] = 0;
-		}
-		__syncthreads();
-
-		// Calculate histogram
-		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
-		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
-		if (x < width && y < height) {
-			uint32_t index = y * width + x;
-			unsigned char pixelValue = image[index];
-			atomicAdd(&histogram[pixelValue], 1);
-		}
-		__syncthreads();
-
-		// Calculate CDF using parallel prefix sum
-		for (int stride = 1; stride < 256; stride *= 2) {
-			if (threadIdx.x >= stride) {
-				cdf[threadIdx.x] += histogram[threadIdx.x - stride];
-			}
-			__syncthreads();
-		}
-
-		// Normalize the image using the CDF
-		if (x < width && y < height) {
-			uint32_t index = y * width + x;
-			unsigned char pixelValue = image[index];
-			unsigned char normalizedValue = static_cast<unsigned char>((cdf[pixelValue] - cdf[0]) * 255 / (width * height - cdf[0]));
-			image[index] = normalizedValue;
-		}
-	}
-
-	namespace histogram_utils
-	{
-		__global__ void computeCDF(uint32_t* histogram, uint32_t* cdf, uint32_t numPixels)
+		__global__ void computeCDF(const uint32_t* hist, float* cdf, uint32_t num_pixels)
 		{
-			__shared__ uint32_t temp[256];
-			int tid = threadIdx.x;
+			__shared__ float shared_cdf[256];
 
-			if (tid < 256) {
-				temp[tid] = histogram[tid];
-			}
-			__syncthreads();
+			int idx = threadIdx.x;
 
-			for (int stride = 1; stride <= tid; stride *= 2) {
-				uint32_t val = 0;
-				if (tid >= stride) {
-					val = temp[tid - stride];
+			if (idx < 256) 
+			{
+				shared_cdf[idx] = 0;
+
+				if (idx == 0) 
+				{
+					// Initialize the first value of CDF
+					shared_cdf[0] = (float)hist[0] / num_pixels;
+
+					// Calculate the cumulative sum
+					for (int i = 1; i < 256; ++i) 
+					{
+						shared_cdf[i] = shared_cdf[i - 1] + (float)hist[i] / num_pixels;
+					}
 				}
-				__syncthreads();
-				temp[tid] += val;
-				__syncthreads();
 			}
 
-			if (tid < 256) {
-				cdf[tid] = temp[tid];
+			__syncthreads();
+
+			// Copy to global memory
+			if (idx < 256) 
+			{
+				cdf[idx] = shared_cdf[idx];
 			}
 		}
 
-		__global__ void normalizeImage(unsigned char* image, uint32_t* cdf, uint32_t width, uint32_t height, uint32_t numPixels, unsigned char intensity)
-		{
+		__global__ void applyEqualization(const unsigned char* input_img, unsigned char* output_img, const float* cdf, uint32_t width, uint32_t height) {
 			int x = blockIdx.x * blockDim.x + threadIdx.x;
 			int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-			if (x < width && y < height)
-			{
-				int idx = y * width + x;
-				unsigned char pixel = image[idx];
-				// Normalize the pixel value based on the CDF and the provided intensity
-				image[idx] = min(255, max(0, (int)((cdf[pixel] - cdf[0]) * 255 / (numPixels - cdf[0]) * intensity / 255)));
+			if (x < width && y < height) {
+				int idx = y * width + x; // Linear index from 2D coordinates
+				output_img[idx] = (unsigned char)(255 * cdf[input_img[idx]]);
 			}
 		}
-
-		/*__global__ void normalizeImage(unsigned char* image, uint32_t* cdf, uint32_t width, uint32_t height, uint32_t numPixels)
-		{
-			uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
-			uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
-
-			if (x < width && y < height) {
-				uint32_t index = y * width + x;
-				unsigned char pixelValue = image[index];
-
-				unsigned char normalizedValue = static_cast<unsigned char>((cdf[pixelValue] - cdf[0]) * 255 / (numPixels - cdf[0]));
-				image[index] = normalizedValue;
-			}
-		}*/
 	}
 }

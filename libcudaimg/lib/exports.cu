@@ -151,92 +151,55 @@ namespace exports
 		gpuErrchk(cudaFree(d_histogram));
 	}
 
-	//void balanceHistogram(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height)
-	//{
-	//	unsigned char* d_image;
-	//	uint32_t* d_histogram;
-	//	uint32_t* d_cdf;
-	//	size_t imageSize = image_len * sizeof(unsigned char);
-	//	size_t histogramSize = 256 * sizeof(uint32_t);
-
-	//	// Allocate memory on the GPU
-	//	gpuErrchk(cudaMalloc((void**)&d_image, imageSize));
-	//	gpuErrchk(cudaMalloc((void**)&d_histogram, histogramSize));
-	//	gpuErrchk(cudaMalloc((void**)&d_cdf, histogramSize));
-
-	//	// Copy the image to device memory
-	//	gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
-	//	gpuErrchk(cudaMemset(d_histogram, 0, histogramSize));
-
-	//	// Define block and grid sizes
-	//	dim3 blockSize(16, 16);
-	//	dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
-
-	//	// Launch the kernel to compute the histogram
-	//	kernels::computeHistogram << <gridSize, blockSize >> > (d_image, d_histogram, width, height);
-	//	gpuErrchk(cudaGetLastError());
-	//	gpuErrchk(cudaDeviceSynchronize());
-
-	//	// Launch the kernel to compute the CDF
-	//	kernels::histogram_utils::computeCDF << <1, 256 >> > (d_histogram, d_cdf, width * height);
-	//	gpuErrchk(cudaGetLastError());
-	//	gpuErrchk(cudaDeviceSynchronize());
-
-	//	// Launch the kernel to normalize the image
-	//	kernels::histogram_utils::normalizeImage << <gridSize, blockSize >> > (d_image, d_cdf, width, height, width * height);
-	//	gpuErrchk(cudaGetLastError());
-	//	gpuErrchk(cudaDeviceSynchronize());
-
-	//	// Copy the processed image back to the host
-	//	gpuErrchk(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
-
-	//	// Free the device memory
-	//	gpuErrchk(cudaFree(d_image));
-	//	gpuErrchk(cudaFree(d_histogram));
-	//	gpuErrchk(cudaFree(d_cdf));
-	//}
-
-	void balanceHistogram(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, unsigned char intensity)
+	void balanceHistogram(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height)
 	{
 		unsigned char* d_image;
+		unsigned char* d_output_image;
 		uint32_t* d_histogram;
-		uint32_t* d_cdf;
+		float* d_cdf;
+
 		size_t imageSize = image_len * sizeof(unsigned char);
 		size_t histogramSize = 256 * sizeof(uint32_t);
+		size_t cdfSize = 256 * sizeof(float);
 
 		// Allocate memory on the GPU
 		gpuErrchk(cudaMalloc((void**)&d_image, imageSize));
+		gpuErrchk(cudaMalloc((void**)&d_output_image, imageSize));
 		gpuErrchk(cudaMalloc((void**)&d_histogram, histogramSize));
-		gpuErrchk(cudaMalloc((void**)&d_cdf, histogramSize));
+		gpuErrchk(cudaMalloc((void**)&d_cdf, cdfSize));
 
-		// Copy the image to device memory
-		gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
+		// Initialize histogram to zero
 		gpuErrchk(cudaMemset(d_histogram, 0, histogramSize));
+
+		// Copy the input image to device memory
+		gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
 
 		// Define block and grid sizes
 		dim3 blockSize(16, 16);
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
-		// Launch the kernel to compute the histogram
+		// Step 1: Compute the histogram
 		kernels::computeHistogram << <gridSize, blockSize >> > (d_image, d_histogram, width, height);
 		gpuErrchk(cudaGetLastError());
 		gpuErrchk(cudaDeviceSynchronize());
 
-		// Launch the kernel to compute the CDF
-		kernels::histogram_utils::computeCDF << <1, 256 >> > (d_histogram, d_cdf, width * height);
+		// Step 2: Compute the CDF
+		uint32_t num_pixels = width * height;
+		kernels::histogram_balancing::computeCDF << <1, 256 >> > (d_histogram, d_cdf, num_pixels);
 		gpuErrchk(cudaGetLastError());
 		gpuErrchk(cudaDeviceSynchronize());
 
-		// Launch the kernel to normalize the image based on the provided intensity
-		kernels::histogram_utils::normalizeImage << <gridSize, blockSize >> > (d_image, d_cdf, width, height, width * height, intensity);
+		// Step 3: Apply histogram equalization
+		kernels::histogram_balancing::applyEqualization << <gridSize, blockSize >> > (d_image, d_output_image, d_cdf, width, height);
 		gpuErrchk(cudaGetLastError());
 		gpuErrchk(cudaDeviceSynchronize());
 
-		// Copy the processed image back to the host
-		gpuErrchk(cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost));
+		// Step 4: Copy the result back to the original image (in-place modification)
+		gpuErrchk(cudaMemcpy(image, d_output_image, imageSize, cudaMemcpyDeviceToHost));
 
-		// Free the device memory
+		// Free allocated memory on the GPU
 		gpuErrchk(cudaFree(d_image));
+		gpuErrchk(cudaFree(d_output_image));
 		gpuErrchk(cudaFree(d_histogram));
 		gpuErrchk(cudaFree(d_cdf));
 	}
