@@ -78,8 +78,47 @@ namespace kernels
 		if (x < width && y < height) {
 			uint32_t index = y * width + x;
 			unsigned char& pixelValue = image[index];
-			
+
 			atomicAdd(&histogram[pixelValue], 1);
+		}
+	}
+
+	__global__ void balanceHistogram(unsigned char* image, uint32_t width, uint32_t height)
+	{
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+		if (x < width && y < height)
+		{
+			uint32_t index = y * width + x;
+			unsigned char pixelValue = image[index];
+
+			// Calculate the cumulative distribution function (CDF)
+			__shared__ uint32_t cdf[256];
+			if (threadIdx.x == 0 && threadIdx.y == 0)
+			{
+				for (int i = 0; i < 256; ++i)
+				{
+					cdf[i] = 0;
+				}
+			}
+			__syncthreads();
+
+			atomicAdd(&cdf[pixelValue], 1);
+
+			__syncthreads();
+
+			// Calculate the CDF for the current pixel value
+			uint32_t cdfValue = 0;
+			for (int i = 0; i <= pixelValue; ++i)
+			{
+				cdfValue += cdf[i];
+			}
+
+			// Normalize the pixel value using the maximum possible value
+			unsigned char normalizedValue = static_cast<unsigned char>(cdfValue * 255 / (width * height));
+
+			image[index] = normalizedValue;
 		}
 	}
 }
