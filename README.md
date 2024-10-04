@@ -8,3 +8,5 @@ CUDA kernels for image processing and image manipulation.
 - Gamma transformation
 - Logarithmic transformation
 - Grayscale conversion
+- Histogram generation
+- Histogram balancing
