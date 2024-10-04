@@ -204,7 +204,7 @@ namespace exports
 		gpuErrchk(cudaFree(d_cdf));
 	}
 
-	void boxFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filterSize)
+	void boxFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filter_size)
 	{
 		unsigned char* d_image;
 		unsigned char* d_output_image;
@@ -222,7 +222,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::boxFilter << <gridSize, blockSize >> > (d_image, d_output_image, width, height, filterSize);
+		kernels::boxFilter << <gridSize, blockSize >> > (d_image, d_output_image, width, height, filter_size);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 

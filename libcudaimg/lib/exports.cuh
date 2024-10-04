@@ -74,5 +74,6 @@ namespace exports
 	/// <param name="width">The width of the image, should be multiplied by 3 if it's in an RGB format.</param>
 	/// <param name="height">The height of the image.</param>
 	/// <param name="filterSize">The size of the filter to apply to the image.</param>
-	void boxFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filterSize);
+	extern "C" __declspec(dllexport)
+		void boxFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filter_size);
 }
