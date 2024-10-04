@@ -204,29 +204,33 @@ namespace exports
 		gpuErrchk(cudaFree(d_cdf));
 	}
 
-	//void balanceHistogram(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height)
-	//{
-	//	unsigned char* d_image;
-	//	size_t imageSize = image_len * sizeof(unsigned char);
+	void boxFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filterSize)
+	{
+		unsigned char* d_image;
+		unsigned char* d_output_image;
+		size_t imageSize = image_len * sizeof(unsigned char);
 
-	//	// Allocate memory on the GPU
-	//	cudaMalloc((void**)&d_image, imageSize);
+		// Allocate memory on the GPU
+		gpuErrchk(cudaMalloc((void**)&d_image, imageSize));
+		gpuErrchk(cudaMalloc((void**)&d_output_image, imageSize));
 
-	//	// Copy the image to device memory
-	//	cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice);
+		// Copy the input image to device memory
+		gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
 
-	//	// Define block and grid sizes
-	//	dim3 blockSize(16, 16);
-	//	dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
+		// Define block and grid sizes
+		dim3 blockSize(16, 16);
+		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
-	//	// Launch the kernel to balance the histogram
-	//	kernels::balanceHistogram << <gridSize, blockSize >> > (d_image, width, height);
-	//	cudaDeviceSynchronize();
+		// Launch the kernel
+		kernels::boxFilter << <gridSize, blockSize >> > (d_image, d_output_image, width, height, filterSize);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
 
-	//	// Copy the processed image back to the host
-	//	cudaMemcpy(image, d_image, imageSize, cudaMemcpyDeviceToHost);
+		// Copy the processed image back to the host
+		gpuErrchk(cudaMemcpy(image, d_output_image, imageSize, cudaMemcpyDeviceToHost));
 
-	//	// Free the device memory
-	//	cudaFree(d_image);
-	//}
+		// Free the device memory
+		gpuErrchk(cudaFree(d_image));
+		gpuErrchk(cudaFree(d_output_image));
+	}
 }

@@ -85,19 +85,19 @@ namespace kernels
 		{
 			__shared__ float shared_cdf[256];
 
-			int idx = threadIdx.x;
+			uint32_t idx = threadIdx.x;
 
-			if (idx < 256) 
+			if (idx < 256)
 			{
 				shared_cdf[idx] = 0;
 
-				if (idx == 0) 
+				if (idx == 0)
 				{
 					// Initialize the first value of CDF
 					shared_cdf[0] = (float)hist[0] / num_pixels;
 
 					// Calculate the cumulative sum
-					for (int i = 1; i < 256; ++i) 
+					for (int i = 1; i < 256; ++i)
 					{
 						shared_cdf[i] = shared_cdf[i - 1] + (float)hist[i] / num_pixels;
 					}
@@ -107,20 +107,52 @@ namespace kernels
 			__syncthreads();
 
 			// Copy to global memory
-			if (idx < 256) 
+			if (idx < 256)
 			{
 				cdf[idx] = shared_cdf[idx];
 			}
 		}
 
 		__global__ void applyEqualization(const unsigned char* input_img, unsigned char* output_img, const float* cdf, uint32_t width, uint32_t height) {
-			int x = blockIdx.x * blockDim.x + threadIdx.x;
-			int y = blockIdx.y * blockDim.y + threadIdx.y;
+			uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+			uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
 			if (x < width && y < height) {
 				int idx = y * width + x; // Linear index from 2D coordinates
 				output_img[idx] = (unsigned char)(255 * cdf[input_img[idx]]);
 			}
+		}
+	}
+
+	__global__ void boxFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filterSize)
+	{
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+		if (x < width && y < height)
+		{
+			uint32_t index = y * width + x;
+
+			uint32_t sum = 0;
+			uint32_t count = 0;
+
+			for (size_t i = -filterSize; i <= filterSize; ++i)
+			{
+				for (uint32_t j = -filterSize; j <= filterSize; ++j)
+				{
+					uint32_t nx = x + i;
+					uint32_t ny = y + j;
+
+					if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+					{
+						uint32_t nIndex = ny * width + nx;
+						sum += image[nIndex];
+						count++;
+					}
+				}
+			}
+
+			output[index] = sum / count;
 		}
 	}
 }

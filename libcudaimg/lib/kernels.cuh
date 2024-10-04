@@ -31,4 +31,7 @@ namespace kernels
 		// Apply histogram equalization to the image
 		__global__ void applyEqualization(const unsigned char* input_img, unsigned char* output_img, const float* cdf, uint32_t width, uint32_t height);
 	}
+
+	// Apply a box filter to the image
+	__global__ void boxFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filterSize);
 }
