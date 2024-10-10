@@ -147,4 +147,31 @@ namespace kernels
 			output[y * width + x] = sum / count;
 		}
 	}
+
+	__global__ void gaussFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filter_size, float sigma) {
+		int x = blockIdx.x * blockDim.x + threadIdx.x;
+		int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+		if (x < width && y < height) {
+			int half_filter = filter_size / 2;
+			float sum = 0;
+			float weight_sum = 0;
+
+			// Loop over the filter window
+			for (int dy = -half_filter; dy <= half_filter; ++dy) {
+				for (int dx = -half_filter; dx <= half_filter; ++dx) {
+					int nx = min(max(x + dx, 0), (int)width - 1);  // Clamp to image boundaries
+					int ny = min(max(y + dy, 0), (int)height - 1); // Clamp to image boundaries
+
+					// Compute the Gaussian weight
+					float weight = expf(-(dx * dx + dy * dy) / (2 * sigma * sigma)) / (2 * M_PI * sigma * sigma);
+					sum += weight * image[ny * width + nx]; // Sum weighted pixel values
+					weight_sum += weight;
+				}
+			}
+
+			// Compute the average and write to output image
+			output[y * width + x] = sum / weight_sum;
+		}
+	}
 }

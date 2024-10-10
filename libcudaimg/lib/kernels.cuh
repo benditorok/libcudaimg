@@ -34,4 +34,7 @@ namespace kernels
 
 	// Apply a box filter to the image
 	__global__ void boxFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filterSize);
+
+	// Apply a Gaussian filter to the image
+	__global__ void gaussFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filterSize, float sigma);
 }
