@@ -4,8 +4,11 @@
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <cmath>
-
 #include "utils.cuh"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace kernels
 {
@@ -97,7 +100,7 @@ namespace kernels
 					shared_cdf[0] = (float)hist[0] / num_pixels;
 
 					// Calculate the cumulative sum
-					for (int i = 1; i < 256; ++i)
+					for (uint32_t i = 1; i < 256; ++i)
 					{
 						shared_cdf[i] = shared_cdf[i - 1] + (float)hist[i] / num_pixels;
 					}
@@ -118,26 +121,26 @@ namespace kernels
 			uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
 			if (x < width && y < height) {
-				int idx = y * width + x; // Linear index from 2D coordinates
+				uint32_t idx = y * width + x; // Linear index from 2D coordinates
 				output_img[idx] = (unsigned char)(255 * cdf[input_img[idx]]);
 			}
 		}
 	}
 
 	__global__ void boxFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filter_size) {
-		int x = blockIdx.x * blockDim.x + threadIdx.x;
-		int y = blockIdx.y * blockDim.y + threadIdx.y;
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
 		if (x < width && y < height) {
-			int half_filter = filter_size / 2;
-			int sum = 0;
-			int count = 0;
+			uint32_t half_filter = filter_size / 2;
+			uint32_t sum = 0;
+			uint32_t count = 0;
 
 			// Loop over the filter window
-			for (int dy = -half_filter; dy <= half_filter; ++dy) {
-				for (int dx = -half_filter; dx <= half_filter; ++dx) {
-					int nx = min(max(x + dx, 0), (int)width - 1);  // Clamp to image boundaries
-					int ny = min(max(y + dy, 0), (int)height - 1); // Clamp to image boundaries
+			for (uint32_t dy = -half_filter; dy <= half_filter; ++dy) {
+				for (uint32_t dx = -half_filter; dx <= half_filter; ++dx) {
+					uint32_t nx = min(max(x + dx, 0), width - 1);  // Clamp to image boundaries
+					uint32_t ny = min(max(y + dy, 0), height - 1); // Clamp to image boundaries
 					sum += image[ny * width + nx];                 // Sum pixel values
 					count++;
 				}
@@ -149,19 +152,19 @@ namespace kernels
 	}
 
 	__global__ void gaussFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filter_size, float sigma) {
-		int x = blockIdx.x * blockDim.x + threadIdx.x;
-		int y = blockIdx.y * blockDim.y + threadIdx.y;
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
 		if (x < width && y < height) {
-			int half_filter = filter_size / 2;
+			uint32_t half_filter = filter_size / 2;
 			float sum = 0;
 			float weight_sum = 0;
 
 			// Loop over the filter window
-			for (int dy = -half_filter; dy <= half_filter; ++dy) {
-				for (int dx = -half_filter; dx <= half_filter; ++dx) {
-					int nx = min(max(x + dx, 0), (int)width - 1);  // Clamp to image boundaries
-					int ny = min(max(y + dy, 0), (int)height - 1); // Clamp to image boundaries
+			for (uint32_t dy = -half_filter; dy <= half_filter; ++dy) {
+				for (uint32_t dx = -half_filter; dx <= half_filter; ++dx) {
+					uint32_t nx = min(max(x + dx, 0), width - 1);  // Clamp to image boundaries
+					uint32_t ny = min(max(y + dy, 0), height - 1); // Clamp to image boundaries
 
 					// Compute the Gaussian weight
 					float weight = expf(-(dx * dx + dy * dy) / (2 * sigma * sigma)) / (2 * M_PI * sigma * sigma);
