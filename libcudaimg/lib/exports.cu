@@ -252,7 +252,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::gaussFilter<<<gridSize, blockSize>>>(d_image, d_output_image, width, height, filter_size);
+		kernels::gaussFilter<<<gridSize, blockSize>>>(d_image, d_output_image, width, height, filter_size, sigma);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 
