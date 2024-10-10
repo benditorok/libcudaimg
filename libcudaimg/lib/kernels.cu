@@ -10,6 +10,21 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+namespace
+{
+	__device__ const int SOBEL_X[3][3] = {
+		{ -1, 0, 1 },
+		{ -2, 0, 2 },
+		{ -1, 0, 1 }
+	};
+
+	__device__ const int SOBEL_Y[3][3] = {
+		{ -1, -2, -1 },
+		{ 0, 0, 0 },
+		{ 1, 2, 1 }
+	};
+}
+
 namespace kernels
 {
 	__global__ void invertImage(unsigned char* image, uint32_t width, uint32_t height)
@@ -180,5 +195,38 @@ namespace kernels
 			// Normalize the result and write to output image
 			output[y * width + x] = static_cast<unsigned char>(sum / normalization_factor);
 		}
+	}
+
+	__global__ void sobelEdgeDetection(const unsigned char* input, unsigned char* output, uint32_t width, uint32_t height)
+	{
+		int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+		if (x >= width || y >= height)
+			return;
+
+		float gradient_x = 0.0f;
+		float gradient_y = 0.0f;
+
+		// Apply Sobel filter
+		for (int32_t dy = -1; dy <= 1; ++dy)
+		{
+			for (int32_t dx = -1; dx <= 1; ++dx)
+			{
+				int32_t nx = min(max(x + dx, 0), static_cast<int32_t>(width) - 1);
+				int32_t ny = min(max(y + dy, 0), static_cast<int32_t>(height) - 1);
+
+				unsigned char pixel = input[ny * width + nx];
+
+				gradient_x += pixel * SOBEL_X[dy + 1][dx + 1];
+				gradient_y += pixel * SOBEL_Y[dy + 1][dx + 1];
+			}
+		}
+
+		// Calculate the magnitude of the gradient
+		float magnitude = sqrtf(gradient_x * gradient_x + gradient_y * gradient_y);
+
+		// Normalize and write to output
+		output[y * width + x] = static_cast<unsigned char>(min(max(magnitude, 0.0f), 255.0f));
 	}
 }

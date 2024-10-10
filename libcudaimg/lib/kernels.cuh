@@ -37,4 +37,7 @@ namespace kernels
 
 	// Apply a gaussian blur to the image
 	__global__ void gaussianBlur(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, float sigma);
+
+	// Apply a sobel edge detection to the image
+	__global__ void sobelEdgeDetection(const unsigned char* input, unsigned char* output, uint32_t width, uint32_t height);
 }
