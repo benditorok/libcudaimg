@@ -164,7 +164,7 @@ namespace kernels
 			for (int32_t dy = -half_filter; dy <= half_filter; ++dy) {
 				for (int32_t dx = -half_filter; dx <= half_filter; ++dx) {
 					int32_t nx = min(max(static_cast<int32_t>(x) + dx, 0), static_cast<int32_t>(width) - 1);  // Clamp to image boundaries
-					int32_t = min(max(static_cast<int32_t>(y) + dy, 0), static_cast<int32_t>(height) - 1); // Clamp to image boundaries
+					int32_t ny = min(max(static_cast<int32_t>(y) + dy, 0), static_cast<int32_t>(height) - 1); // Clamp to image boundaries
 
 					// Compute the Gaussian weight
 					float weight = expf(-(dx * dx + dy * dy) / (2 * sigma * sigma)) / (2 * M_PI * sigma * sigma);
