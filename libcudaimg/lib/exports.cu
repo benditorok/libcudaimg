@@ -15,17 +15,6 @@
 
 using namespace utils;
 
-namespace
-{
-	const size_t GAUSS_FILTER_LEN = 9;
-	// Gaussian values for a 3x3 filter with sigma = 1.0
-	const float GAUSS_FILTER_MASK[GAUSS_FILTER_LEN] = {
-		1 / 16.0, 2 / 16.0, 1 / 16.0,
-		2 / 16.0, 4 / 16.0, 2 / 16.0,
-		1 / 16.0, 2 / 16.0, 1 / 16.0
-	};
-}
-
 namespace exports
 {
 	void invertImage(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height) {
