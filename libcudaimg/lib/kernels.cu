@@ -132,16 +132,16 @@ namespace kernels
 		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
 		if (x < width && y < height) {
-			uint32_t half_filter = filter_size / 2;
-			uint32_t sum = 0;
-			uint32_t count = 0;
+			int32_t half_filter = static_cast<int32_t>(filter_size) / 2;
+			int32_t sum = 0;
+			int32_t count = 0;
 
 			// Loop over the filter window
-			for (uint32_t dy = -half_filter; dy <= half_filter; ++dy) {
-				for (uint32_t dx = -half_filter; dx <= half_filter; ++dx) {
-					uint32_t nx = min(max(x + dx, 0), width - 1);  // Clamp to image boundaries
-					uint32_t ny = min(max(y + dy, 0), height - 1); // Clamp to image boundaries
-					sum += image[ny * width + nx];                 // Sum pixel values
+			for (int32_t dy = -half_filter; dy <= half_filter; ++dy) {
+				for (int32_t dx = -half_filter; dx <= half_filter; ++dx) {
+					int32_t nx = min(max(static_cast<int32_t>(x) + dx, 0), static_cast<int32_t>(width) - 1);  // Clamp to image boundaries
+					int32_t ny = min(max(static_cast<int32_t>(y) + dy, 0), static_cast<int32_t>(height) - 1); // Clamp to image boundaries
+					sum += image[static_cast<uint32_t>(ny) * width + static_cast<uint32_t>(nx)];                 // Sum pixel values
 					count++;
 				}
 			}
@@ -156,7 +156,7 @@ namespace kernels
 		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
 		if (x < width && y < height) {
-			int32_t half_filter = filter_size / 2;
+			int32_t half_filter = static_cast<int32_t>(filter_size / 2);
 			float sum = 0.0f;
 			float weight_sum = 0.0f;
 
@@ -168,7 +168,7 @@ namespace kernels
 
 					// Compute the Gaussian weight
 					float weight = expf(-(dx * dx + dy * dy) / (2 * sigma * sigma)) / (2 * M_PI * sigma * sigma);
-					sum += weight * image[ny * width + nx]; // Sum weighted pixel values
+					sum += weight * image[static_cast<uint32_t>(ny) * width + static_cast<uint32_t>(nx)]; // Sum weighted pixel values
 					weight_sum += weight;
 				}
 			}
@@ -182,4 +182,6 @@ namespace kernels
 			}
 		}
 	}
+
+
 }
