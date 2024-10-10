@@ -156,15 +156,15 @@ namespace kernels
 		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
 		if (x < width && y < height) {
-			uint32_t half_filter = filter_size / 2;
-			float sum = 0;
-			float weight_sum = 0;
+			int32_t half_filter = filter_size / 2;
+			float sum = 0.0f;
+			float weight_sum = 0.0f;
 
 			// Loop over the filter window
-			for (uint32_t dy = -half_filter; dy <= half_filter; ++dy) {
-				for (uint32_t dx = -half_filter; dx <= half_filter; ++dx) {
-					uint32_t nx = min(max(x + dx, 0), width - 1);  // Clamp to image boundaries
-					uint32_t ny = min(max(y + dy, 0), height - 1); // Clamp to image boundaries
+			for (int32_t dy = -half_filter; dy <= half_filter; ++dy) {
+				for (int32_t dx = -half_filter; dx <= half_filter; ++dx) {
+					int32_t nx = min(max(static_cast<int32_t>(x) + dx, 0), static_cast<int32_t>(width) - 1);  // Clamp to image boundaries
+					int32_t = min(max(static_cast<int32_t>(y) + dy, 0), static_cast<int32_t>(height) - 1); // Clamp to image boundaries
 
 					// Compute the Gaussian weight
 					float weight = expf(-(dx * dx + dy * dy) / (2 * sigma * sigma)) / (2 * M_PI * sigma * sigma);
@@ -173,8 +173,13 @@ namespace kernels
 				}
 			}
 
-			// Compute the average and write to output image
-			output[y * width + x] = sum / weight_sum;
+			// Ensure weight_sum is not zero to avoid division by zero
+			if (weight_sum > 0) {
+				output[y * width + x] = static_cast<unsigned char>(sum / weight_sum);
+			}
+			else {
+				output[y * width + x] = image[y * width + x]; // Fallback to original pixel value
+			}
 		}
 	}
 }
