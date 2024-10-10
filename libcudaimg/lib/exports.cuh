@@ -87,5 +87,5 @@ namespace exports
 	/// <param name="filter_size">The size of the filter to apply to the image.</param>
 	/// <param name="sigma">The sigma value to apply to the image.</param>
 	extern "C" __declspec(dllexport)
-		void gaussFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filter_size, float sigma)
+		void gaussFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filter_size, float sigma);
 }
