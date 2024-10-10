@@ -197,36 +197,41 @@ namespace kernels
 		}
 	}
 
-	__global__ void sobelEdgeDetection(const unsigned char* input, unsigned char* output, uint32_t width, uint32_t height)
-	{
+	__global__ void sobelEdgeDetection(const unsigned char* image, unsigned char* output, uint32_t width, uint32_t height) {
 		int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
 		int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
-		if (x >= width || y >= height)
-			return;
+		if (x < 1 || x >= width - 1 || y < 1 || y >= height - 1) {
+			return;  // Ensure we're not at the edge of the image
+		}
 
 		float gradient_x = 0.0f;
 		float gradient_y = 0.0f;
 
 		// Apply Sobel filter
-		for (int32_t dy = -1; dy <= 1; ++dy)
-		{
-			for (int32_t dx = -1; dx <= 1; ++dx)
-			{
-				int32_t nx = min(max(x + dx, 0), static_cast<int32_t>(width) - 1);
-				int32_t ny = min(max(y + dy, 0), static_cast<int32_t>(height) - 1);
+		for (int32_t dy = -1; dy <= 1; ++dy) {
+			for (int32_t dx = -1; dx <= 1; ++dx) {
+				int32_t nx = x + dx;
+				int32_t ny = y + dy;
 
-				unsigned char pixel = input[ny * width + nx];
+				// Read RGB pixel
+				int32_t input_index = (ny * width + nx) * 3; // 3 for R, G, B
+				unsigned char pixel_r = image[input_index];
+				unsigned char pixel_g = image[input_index + 1];
+				unsigned char pixel_b = image[input_index + 2];
 
-				gradient_x += pixel * SOBEL_X[dy + 1][dx + 1];
-				gradient_y += pixel * SOBEL_Y[dy + 1][dx + 1];
+				// Accumulate gradients
+				float intensity = 0.299f * pixel_r + 0.587f * pixel_g + 0.114f * pixel_b; // Convert to grayscale
+				gradient_x += intensity * SOBEL_X[dy + 1][dx + 1];
+				gradient_y += intensity * SOBEL_Y[dy + 1][dx + 1];
 			}
 		}
 
-		// Calculate the magnitude of the gradient
+		// Calculate the magnitude
 		float magnitude = sqrtf(gradient_x * gradient_x + gradient_y * gradient_y);
+		magnitude = min(max(magnitude, 0.0f), 255.0f); // Clamp to [0, 255]
 
-		// Normalize and write to output
-		output[y * width + x] = static_cast<unsigned char>(min(max(magnitude, 0.0f), 255.0f));
+		// Write to the output image (grayscale)
+		output[y * width + x] = static_cast<unsigned char>(magnitude);
 	}
 }
