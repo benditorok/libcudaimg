@@ -54,19 +54,19 @@ namespace kernels
 		uint32_t total_pixels = width * height;
 		size_t rgb_index = pixel_id * 3;
 
-		if (rgb_index < total_pixels)
-		{
-			unsigned char& r = image[rgb_index];
-			unsigned char& g = image[rgb_index + 1];
-			unsigned char& b = image[rgb_index + 2];
+		if (rgb_index >= total_pixels)
+			return;
 
-			// Calculate the grayscale value
-			unsigned char gray = static_cast<unsigned char>(0.299f * r + 0.587f * g + 0.114f * b);
+		unsigned char& r = image[rgb_index];
+		unsigned char& g = image[rgb_index + 1];
+		unsigned char& b = image[rgb_index + 2];
 
-			image[rgb_index] = gray;
-			image[rgb_index + 1] = gray;
-			image[rgb_index + 2] = gray;
-		}
+		// Calculate the grayscale value
+		unsigned char gray = static_cast<unsigned char>(0.299f * r + 0.587f * g + 0.114f * b);
+
+		image[rgb_index] = gray;
+		image[rgb_index + 1] = gray;
+		image[rgb_index + 2] = gray;
 	}
 
 	__global__ void computeHistogram(unsigned char* image, uint32_t* histogram, uint32_t width, uint32_t height)
@@ -151,37 +151,34 @@ namespace kernels
 		}
 	}
 
-	__global__ void gaussFilter(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, uint32_t filter_size, float sigma) {
+	__global__ void gaussianBlur(unsigned char* image, unsigned char* output, uint32_t width, uint32_t height, float sigma) {
 		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
 		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
+		// Calculate the filter radius based on sigma
+		int32_t filter_radius = static_cast<int32_t>(ceil(3 * sigma));
+
 		if (x < width && y < height) {
-			int32_t half_filter = static_cast<int32_t>(filter_size / 2);
 			float sum = 0.0f;
-			float weight_sum = 0.0f;
+			float normalization_factor = 0.0f;
 
 			// Loop over the filter window
-			for (int32_t dy = -half_filter; dy <= half_filter; ++dy) {
-				for (int32_t dx = -half_filter; dx <= half_filter; ++dx) {
+			for (int32_t dy = -filter_radius; dy <= filter_radius; ++dy) {
+				for (int32_t dx = -filter_radius; dx <= filter_radius; ++dx) {
 					int32_t nx = min(max(static_cast<int32_t>(x) + dx, 0), static_cast<int32_t>(width) - 1);  // Clamp to image boundaries
 					int32_t ny = min(max(static_cast<int32_t>(y) + dy, 0), static_cast<int32_t>(height) - 1); // Clamp to image boundaries
 
-					// Compute the Gaussian weight
-					float weight = expf(-(dx * dx + dy * dy) / (2 * sigma * sigma)) / (2 * M_PI * sigma * sigma);
-					sum += weight * image[static_cast<uint32_t>(ny) * width + static_cast<uint32_t>(nx)]; // Sum weighted pixel values
-					weight_sum += weight;
+					// Calculate the Gaussian weight
+					float distance = dx * dx + dy * dy;
+					float weight = expf(-(distance) / (2.0f * sigma * sigma)) / (2.0f * M_PI * sigma * sigma);
+
+					sum += image[static_cast<uint32_t>(ny) * width + static_cast<uint32_t>(nx)] * weight; // Sum weighted pixel values
+					normalization_factor += weight;
 				}
 			}
 
-			// Ensure weight_sum is not zero to avoid division by zero
-			if (weight_sum > 0) {
-				output[y * width + x] = static_cast<unsigned char>(sum / weight_sum);
-			}
-			else {
-				output[y * width + x] = image[y * width + x]; // Fallback to original pixel value
-			}
+			// Normalize the result and write to output image
+			output[y * width + x] = static_cast<unsigned char>(sum / normalization_factor);
 		}
 	}
-
-
 }

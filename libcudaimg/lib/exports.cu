@@ -7,8 +7,24 @@
 #include "utils.cuh"
 #include "exports.cuh"
 #include "kernels.cuh"
+#include <vector>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 using namespace utils;
+
+namespace
+{
+	const size_t GAUSS_FILTER_LEN = 9;
+	// Gaussian values for a 3x3 filter with sigma = 1.0
+	const float GAUSS_FILTER_MASK[GAUSS_FILTER_LEN] = {
+		1 / 16.0, 2 / 16.0, 1 / 16.0,
+		2 / 16.0, 4 / 16.0, 2 / 16.0,
+		1 / 16.0, 2 / 16.0, 1 / 16.0
+	};
+}
 
 namespace exports
 {
@@ -234,7 +250,51 @@ namespace exports
 		gpuErrchk(cudaFree(d_output_image));
 	}
 
-	void gaussFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, uint32_t filter_size, float sigma)
+	//void gaussFilter(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, float sigma)
+	//{
+	//	unsigned char* d_image;
+	//	unsigned char* d_output_image;
+	//	float* d_filter;
+	//	size_t imageSize = image_len * sizeof(unsigned char);
+
+	//	size_t filterSize = 9 * sizeof(float);
+
+	//	// Scale the filter with the given sigma value
+	//	float scaledFilter[9];
+
+	//	for (size_t i = 0; i < GAUSS_FILTER_LEN; i++)
+	//	{
+	//		scaledFilter[i] = GAUSS_FILTER_MASK[i] * sigma;
+	//	}
+
+	//	// Allocate memory on the GPU
+	//	gpuErrchk(cudaMalloc((void**)&d_image, imageSize));
+	//	gpuErrchk(cudaMalloc((void**)&d_output_image, imageSize));
+	//	gpuErrchk(cudaMalloc((void**)&d_filter, filterSize));
+
+	//	// Copy the input image to device memory
+	//	gpuErrchk(cudaMemcpy(d_image, image, imageSize, cudaMemcpyHostToDevice));
+	//	gpuErrchk(cudaMemcpy(d_filter, scaledFilter, filterSize, cudaMemcpyHostToDevice));
+
+	//	// Define block and grid sizes
+	//	dim3 blockSize(16, 16);
+	//	dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
+
+	//	// Launch the kernel
+	//	kernels::gaussFilter<<<gridSize, blockSize>>>(d_image, d_output_image, static_cast<int32_t>(width), static_cast<int32_t>(height), d_filter, 3);
+	//	gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+	//	gpuErrchk(cudaDeviceSynchronize());
+
+	//	// Copy the processed image back to the host
+	//	gpuErrchk(cudaMemcpy(image, d_output_image, imageSize, cudaMemcpyDeviceToHost));
+
+	//	// Free the device memory
+	//	gpuErrchk(cudaFree(d_image));
+	//	gpuErrchk(cudaFree(d_output_image));
+	//	gpuErrchk(cudaFree(d_filter));
+	//}
+
+	void gaussianBlur(unsigned char* image, uint32_t image_len, uint32_t width, uint32_t height, float sigma)
 	{
 		unsigned char* d_image;
 		unsigned char* d_output_image;
@@ -252,7 +312,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::gaussFilter<<<gridSize, blockSize>>>(d_image, d_output_image, width, height, filter_size, sigma);
+		kernels::gaussianBlur<<<gridSize, blockSize>>>(d_image, d_output_image, width, height, sigma);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 
