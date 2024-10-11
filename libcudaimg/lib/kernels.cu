@@ -197,42 +197,37 @@ namespace kernels
 		}
 	}
 
-	__global__ void sobelEdgeDetection(const unsigned char* input, unsigned char* output, uint32_t width, uint32_t height)
+	__global__ void sobelEdgeDetection(const unsigned char* image, unsigned char* output, uint32_t width, uint32_t height)
 	{
-		int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
-		int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
-		if (x >= width || y >= height)
+		if (x + 2 >= width || y >= height)
 			return;
 
 		float gradient_x = 0.0f;
 		float gradient_y = 0.0f;
 
-		// Apply Sobel filter
-		for (int32_t dy = -1; dy <= 1; ++dy)
-		{
-			for (int32_t dx = -1; dx <= 1; ++dx)
-			{
-				int32_t nx = min(max(x + dx, 0), static_cast<int32_t>(width) - 1);
-				int32_t ny = min(max(y + dy, 0), static_cast<int32_t>(height) - 1);
+		// Apply the Sobel filter
+		for (int32_t dy = -1; dy <= 1; ++dy) {
+			for (int32_t dx = -1; dx <= 1; ++dx) {
+				// Clamp coordinates to image boundaries
+				int32_t nx = min(max(static_cast<int32_t>(x) + dx, 0), static_cast<int32_t>(width) - 1);
+				int32_t ny = min(max(static_cast<int32_t>(y) + dy, 0), static_cast<int32_t>(height) - 1);
 
-				int32_t input_index = (ny * width + nx) * 3;
+				// Fetch the pixel value from the grayscale image
+				unsigned char pixel_value = image[ny * width + nx];
 
-				unsigned char pixel_r = input[input_index];
-				unsigned char pixel_g = input[input_index + 1];
-				unsigned char pixel_b = input[input_index + 2];
-
-				float pixel_intensity = 0.299f * pixel_r + 0.587f * pixel_g + 0.114f * pixel_b;
-
-				gradient_x += pixel_intensity * SOBEL_X[dy + 1][dx + 1];
-				gradient_y += pixel_intensity * SOBEL_Y[dy + 1][dx + 1];
+				// Apply Sobel filters to compute gradients
+				gradient_x += pixel_value * SOBEL_X[dy + 1][dx + 1];
+				gradient_y += pixel_value * SOBEL_Y[dy + 1][dx + 1];
 			}
 		}
 
-		// Calculate the magnitude of the gradient
+		// Compute the gradient magnitude
 		float magnitude = sqrtf(gradient_x * gradient_x + gradient_y * gradient_y);
 
-		// Normalize and write to output
+		// Clamp the result to [0, 255] and write it to the output image
 		output[y * width + x] = static_cast<unsigned char>(min(max(magnitude, 0.0f), 255.0f));
 	}
 }

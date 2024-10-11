@@ -287,7 +287,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Launch the kernel
-		kernels::sobelEdgeDetection << <gridSize, blockSize >> > (d_image, d_output_image, width, height);
+		kernels::sobelEdgeDetection<<<gridSize, blockSize>>>(d_image, d_output_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 
