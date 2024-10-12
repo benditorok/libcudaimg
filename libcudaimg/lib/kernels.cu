@@ -59,7 +59,8 @@ namespace kernels
 		if (x < width && y < height)
 		{
 			uint32_t index = y * width + x;
-			image[index] = logf(1 + image[index]) / logf(1 + base) * 255; // Apply logarithmic transformation
+			float pixelValue = static_cast<float>(image[index]) / 255.0f;
+			image[index] = static_cast<unsigned char>(logf(1 + pixelValue) / logf(1 + base) * 255);
 		}
 	}
 
