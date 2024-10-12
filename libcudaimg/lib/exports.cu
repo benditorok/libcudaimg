@@ -286,6 +286,15 @@ namespace exports
 		dim3 blockSize(16, 16);
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
+		// Preprocessing steps
+		kernels::grayscaleImage << <gridSize, blockSize >> > (d_image, width, height);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
+
+		kernels::gaussianBlur << <gridSize, blockSize >> > (d_image, d_image, width, height, 1.0f);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
+
 		// Launch the kernel
 		kernels::sobelEdgeDetection << <gridSize, blockSize >> > (d_image, d_output_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
@@ -315,6 +324,15 @@ namespace exports
 		// Define block and grid sizes
 		dim3 blockSize(16, 16);
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
+
+		// Preprocessing steps
+		kernels::grayscaleImage << <gridSize, blockSize >> > (d_image, width, height);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
+
+		kernels::gaussianBlur << <gridSize, blockSize >> > (d_image, d_image, width, height, 1.0f);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
 
 		// Launch the kernel
 		kernels::laplaceEdgeDetection << <gridSize, blockSize >> > (d_image, d_output_image, width, height);
@@ -354,6 +372,15 @@ namespace exports
 		// Define block and grid sizes
 		dim3 blockSize(16, 16);
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
+
+		// Preprocessing steps
+		kernels::grayscaleImage<<<gridSize, blockSize>>>(d_image, width, height);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
+
+		kernels::gaussianBlur << <gridSize, blockSize >> > (d_image, d_image, width, height, 1.0f);
+		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
+		gpuErrchk(cudaDeviceSynchronize());
 
 		// Launch the kernels
 		kernels::harris::computeGradients << <gridSize, blockSize >> > (d_image, d_grad_x, d_grad_y, width, height);
