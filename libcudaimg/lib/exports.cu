@@ -113,7 +113,7 @@ namespace exports
 		uint32_t blocks = (num_pixels + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
 		// Launch the kernel
-		kernels::grayscaleImage << <blocks, THREADS_PER_BLOCK >> > (d_image, width, height);
+		kernels::grayscaleImage<<<blocks, THREADS_PER_BLOCK >>>(d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 
@@ -287,7 +287,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Preprocessing steps
-		kernels::grayscaleImage << <gridSize, blockSize >> > (d_image, width, height);
+		kernels::grayscaleImage << <(width * height + 256 - 1) / 256, 256 >> > (d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 
@@ -326,7 +326,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Preprocessing steps
-		kernels::grayscaleImage << <gridSize, blockSize >> > (d_image, width, height);
+		kernels::grayscaleImage << <(width * height + 256 - 1) / 256, 256 >> > (d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 
@@ -374,7 +374,7 @@ namespace exports
 		dim3 gridSize((width - 1) / blockSize.x + 1, (height - 1) / blockSize.y + 1);
 
 		// Preprocessing steps
-		kernels::grayscaleImage<<<gridSize, blockSize>>>(d_image, width, height);
+		kernels::grayscaleImage << <(width * height + 256 - 1) / 256, 256 >> > (d_image, width, height);
 		gpuErrchk(cudaGetLastError()); // Check for kernel launch errors
 		gpuErrchk(cudaDeviceSynchronize());
 
