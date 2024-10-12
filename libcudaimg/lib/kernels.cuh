@@ -40,4 +40,7 @@ namespace kernels
 
 	// Apply a sobel edge detection to the image
 	__global__ void sobelEdgeDetection(const unsigned char* image, unsigned char* output, uint32_t width, uint32_t height);
+
+	// Apply a laplace edge detection to the image
+	__global__ void laplaceEdgeDetection(const unsigned char* image, unsigned char* output, uint32_t width, uint32_t height);
 }

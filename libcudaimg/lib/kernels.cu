@@ -230,4 +230,33 @@ namespace kernels
 		// Clamp the result to [0, 255] and write it to the output image
 		output[y * width + x] = static_cast<unsigned char>(min(max(magnitude, 0.0f), 255.0f));
 	}
+
+	__global__ void laplaceEdgeDetection(const unsigned char* image, unsigned char* output, uint32_t width, uint32_t height)
+	{
+		uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+		uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+		if (x + 2 >= width || y >= height)
+			return;
+
+		float sum = 0.0f;
+
+		// Apply the Laplace filter
+		for (int32_t dy = -1; dy <= 1; ++dy) {
+			for (int32_t dx = -1; dx <= 1; ++dx) {
+				// Clamp coordinates to image boundaries
+				int32_t nx = min(max(static_cast<int32_t>(x) + dx, 0), static_cast<int32_t>(width) - 1);
+				int32_t ny = min(max(static_cast<int32_t>(y) + dy, 0), static_cast<int32_t>(height) - 1);
+
+				// Fetch the pixel value from the grayscale image
+				unsigned char pixel_value = image[ny * width + nx];
+
+				// Apply Laplace filter
+				sum += pixel_value * SOBEL_X[dy + 1][dx + 1];
+			}
+		}
+
+		// Clamp the result to [0, 255] and write it to the output image
+		output[y * width + x] = static_cast<unsigned char>(min(max(sum, 0.0f), 255.0f));
+	}
 }
