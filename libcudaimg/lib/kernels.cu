@@ -259,4 +259,127 @@ namespace kernels
 		// Clamp the result to [0, 255] and write it to the output image
 		output[y * width + x] = static_cast<unsigned char>(min(max(sum, 0.0f), 255.0f));
 	}
+
+	namespace harris
+	{
+		__global__ void computeGradients(const unsigned char* input, float* grad_x, float* grad_y, uint32_t width, uint32_t height)
+		{
+			int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+			int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+			if (x >= width || y >= height)
+				return;
+
+			float gradient_x = 0.0f;
+			float gradient_y = 0.0f;
+
+			for (int32_t dy = -1; dy <= 1; ++dy)
+			{
+				for (int32_t dx = -1; dx <= 1; ++dx)
+				{
+					int32_t nx = min(max(x + dx, 0), static_cast<int32_t>(width) - 1);
+					int32_t ny = min(max(y + dy, 0), static_cast<int32_t>(height) - 1);
+
+					int32_t input_index = (ny * width + nx) * 3;
+
+					unsigned char pixel_r = input[input_index];
+					unsigned char pixel_g = input[input_index + 1];
+					unsigned char pixel_b = input[input_index + 2];
+
+					float pixel_intensity = 0.299f * pixel_r + 0.587f * pixel_g + 0.114f * pixel_b;
+
+					gradient_x += pixel_intensity * SOBEL_X[dy + 1][dx + 1];
+					gradient_y += pixel_intensity * SOBEL_Y[dy + 1][dx + 1];
+				}
+			}
+
+			grad_x[y * width + x] = gradient_x;
+			grad_y[y * width + x] = gradient_y;
+		}
+
+		__global__ void computeHarrisResponse(const float* grad_x, const float* grad_y, float* response, uint32_t width, uint32_t height, float k)
+		{
+			int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+			int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+			if (x >= width || y >= height)
+				return;
+
+			float ix2 = 0.0f, iy2 = 0.0f, ixy = 0.0f;
+
+			for (int32_t dy = -1; dy <= 1; ++dy)
+			{
+				for (int32_t dx = -1; dx <= 1; ++dx)
+				{
+					int32_t nx = min(max(x + dx, 0), static_cast<int32_t>(width) - 1);
+					int32_t ny = min(max(y + dy, 0), static_cast<int32_t>(height) - 1);
+
+					float gx = grad_x[ny * width + nx];
+					float gy = grad_y[ny * width + nx];
+
+					ix2 += gx * gx;
+					iy2 += gy * gy;
+					ixy += gx * gy;
+				}
+			}
+
+			float det = ix2 * iy2 - ixy * ixy;
+			float trace = ix2 + iy2;
+			response[y * width + x] = det - k * trace * trace;
+		}
+
+		__global__ void nonMaxSuppression(const float* response, unsigned char* output, uint32_t width, uint32_t height, float threshold)
+		{
+			int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+			int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+			if (x >= width || y >= height)
+				return;
+
+			float r = response[y * width + x];
+
+			if (r > threshold)
+			{
+				bool is_max = true;
+				for (int32_t dy = -1; dy <= 1; ++dy)
+				{
+					for (int32_t dx = -1; dx <= 1; ++dx)
+					{
+						if (dx == 0 && dy == 0)
+							continue;
+
+						int32_t nx = min(max(x + dx, 0), static_cast<int32_t>(width) - 1);
+						int32_t ny = min(max(y + dy, 0), static_cast<int32_t>(height) - 1);
+
+						if (response[ny * width + nx] > r)
+						{
+							is_max = false;
+							break;
+						}
+					}
+					if (!is_max)
+						break;
+				}
+
+				if (is_max)
+				{
+					// Draw red rectangle around the corner
+					for (int32_t dy = -1; dy <= 1; ++dy)
+					{
+						for (int32_t dx = -1; dx <= 1; ++dx)
+						{
+							int32_t nx = min(max(x + dx, 0), static_cast<int32_t>(width) - 1);
+							int32_t ny = min(max(y + dy, 0), static_cast<int32_t>(height) - 1);
+
+							int32_t output_index = (ny * width + nx) * 3;
+							output[output_index] = 255;     // Red
+							output[output_index + 1] = 0;   // Green
+							output[output_index + 2] = 0;   // Blue
+						}
+					}
+				}
+			}
+		}
+
+	}
 }

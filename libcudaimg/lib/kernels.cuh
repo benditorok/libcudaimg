@@ -43,4 +43,16 @@ namespace kernels
 
 	// Apply a laplace edge detection to the image
 	__global__ void laplaceEdgeDetection(const unsigned char* image, unsigned char* output, uint32_t width, uint32_t height);
+
+	namespace harris
+	{
+		// Compute the gradients of the image
+		__global__ void computeGradients(const unsigned char* input, float* grad_x, float* grad_y, uint32_t width, uint32_t height);
+
+		// Compute the Harris response of the image
+		__global__ void computeHarrisResponse(const float* grad_x, const float* grad_y, float* response, uint32_t width, uint32_t height, float k);
+
+		// Apply non-maximum suppression to the Harris response
+		__global__ void nonMaxSuppression(const float* response, unsigned char* output, uint32_t width, uint32_t height, float threshold);
+	}
 }
